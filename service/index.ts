@@ -1,16 +1,14 @@
-"use strict";
-const {
-  PDS,
-  envToCfg,
-  envToSecrets,
-  readEnv,
-  httpLogger,
-} = require("@atproto/pds");
-const pkg = require("@atproto/pds/package.json");
+import type { Request, Response } from "express";
+import type { AtIdentifierString } from "@atproto/lex";
+import { PDS, envToCfg, envToSecrets, readEnv, httpLogger } from "@atproto/pds";
+import pkg from "@atproto/pds/package.json" with { type: "json" };
+
+// matches docker tag used in compose file, may deviate from @atproto/pds version.
+const DISTRO_VER = "0.4";
 
 const main = async () => {
   const env = readEnv();
-  env.version ||= pkg.version;
+  env.version ||= ver(DISTRO_VER, pkg.version);
   const cfg = envToCfg(env);
   const secrets = envToSecrets(env);
   const pds = await PDS.create(cfg, secrets);
@@ -19,7 +17,6 @@ const main = async () => {
   pds.app.get("/tls-check", (req, res) => {
     checkHandleRoute(pds, req, res);
   });
-  // Graceful shutdown (see also https://aws.amazon.com/blogs/containers/graceful-shutdowns-with-ecs/)
   process.on("SIGTERM", async () => {
     httpLogger.info("pds is stopping");
     await pds.destroy();
@@ -27,11 +24,7 @@ const main = async () => {
   });
 };
 
-async function checkHandleRoute(
-  /** @type {PDS} */ pds,
-  /** @type {import('express').Request} */ req,
-  /** @type {import('express').Response} */ res
-) {
+async function checkHandleRoute(pds: PDS, req: Request, res: Response) {
   try {
     const { domain } = req.query;
     if (!domain || typeof domain !== "string") {
@@ -44,7 +37,7 @@ async function checkHandleRoute(
       return res.json({ success: true });
     }
     const isHostedHandle = pds.ctx.cfg.identity.serviceHandleDomains.find(
-      (avail) => domain.endsWith(avail)
+      (avail) => domain.endsWith(avail),
     );
     if (!isHostedHandle) {
       return res.status(400).json({
@@ -52,7 +45,9 @@ async function checkHandleRoute(
         message: "handles are not provided on this domain",
       });
     }
-    const account = await pds.ctx.accountManager.getAccount(domain);
+    const account = await pds.ctx.accountManager.getAccount(
+      domain as AtIdentifierString,
+    );
     if (!account) {
       return res.status(404).json({
         error: "NotFound",
@@ -67,6 +62,16 @@ async function checkHandleRoute(
       message: "Internal Server Error",
     });
   }
+}
+
+// e.g. ver('0.4', '0.5.1') -> '0.4.5001'
+function ver(base: `${string}.${string}`, pkgver: string) {
+  const { 0: major, 1: minor, 2: patch, length } = pkgver.split(".");
+  if (length !== 3) return pkgver;
+  if (major !== "0") return pkgver;
+  if (minor === "" || minor === "0") return pkgver;
+  if (patch === "") return pkgver;
+  return `${base}.${minor}${patch.padStart(3, "0")}`;
 }
 
 main();

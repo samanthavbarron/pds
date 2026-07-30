@@ -343,7 +343,7 @@ LOG_LEVEL=debug
 
 ### Updating your PDS
 
-It is recommended that you keep your PDS up to date with new versions. You can use the `pdsadmin` tool to update your PDS.
+It is recommended that you keep your PDS up to date with new versions. This repo sets up [watchtower](https://github.com/nicholas-fedor/watchtower), which handles automatic updates. You can also use the `pdsadmin` tool to manually update your PDS.
 
 ```bash
 sudo pdsadmin update
@@ -359,7 +359,7 @@ sudo pdsadmin update
 | `PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX` | None                               |
 | `PDS_DATA_DIRECTORY`                        | `/pds`                             |
 | `PDS_BLOBSTORE_DISK_LOCATION`               | `/pds/blocks`                      |
-| `PDS_BLOB_UPLOAD_LIMIT`                     | `5242880` (5MB)                    |
+| `PDS_BLOB_UPLOAD_LIMIT`                     | `104857600` (100MB)                |
 | `PDS_DID_PLC_URL`                           | `https://plc.directory`            |
 | `PDS_BSKY_APP_VIEW_URL`                     | `https://api.bsky.app`             |
 | `PDS_BSKY_APP_VIEW_DID`                     | `did:web:api.bsky.app`             |
@@ -373,6 +373,7 @@ sudo pdsadmin update
 | `PDS_PRIVACY_POLICY_URL`                    | None                               |
 | `PDS_TERMS_OF_SERVICE_URL`                  | None                               |
 | `PDS_RATE_LIMITS_ENABLED`                   | `true`                             |
+| `PDS_INVITE_REQUIRED`                       | `true`                             |
 
 ### Migrating your PDS
 

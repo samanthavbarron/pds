@@ -4,30 +4,38 @@ Below are the steps to publish a new version of the PDS distribution.  The distr
 
 1. Update the @atproto/pds dependency in the `service/` directory.
 
-    We're using version `0.4.999` as an example.  The latest version of the [`@atproto/pds` package](https://www.npmjs.com/package/@atproto/pds) must already be published on npm.
+    We're using version `0.8.9` as an example.  The latest version of the [`@atproto/pds` package](https://www.npmjs.com/package/@atproto/pds) must already be published on npm.
     ```sh
     $ cd service/
-    $ pnpm update @atproto/pds@0.4.999
+    $ pnpm update @atproto/pds@0.8.9
     $ cd ..
     ```
 
-2. Commit the change directly to `main`.
+2. Determine the distro version based on the version of @atproto/pds.
+
+    While the version of `@atproto/pds` may be something like `0.8.9`, the PDS distro must stay on the `0.4.x` line because the `0.4` tag is referenced in the distro's compose file.  Staying on `0.4` allows the PDS to continue auto-updating.
+
+    So we construct the new distro version from the `minor` and `patch` versions of `@atproto/pds`: `0.4.{minor}${patch}` where patch is padded to three digits.
+
+    So in the case of `@atproto/pds` being at `0.8.9`, the disto version will be `0.4.8009`.
+
+3. Commit the change directly to `main`.
 
     As soon as this is committed and pushed, the workflow to build the Docker image will start running.
     ```sh
     $ git add service/
-    $ git commit -m "pds v0.4.999"
+    $ git commit -m "pds v0.4.8009"
     $ git push
     ```
 
-3. Smoke test the new Docker image.
+4. Smoke test the new Docker image.
 
     The new Docker image built by GitHub can be found [here](https://github.com/bluesky-social/pds/pkgs/container/pds).  You can use the `sha-`prefixed tag to deploy this image to a test PDS for smoke testing.
 
-4. Finally, tag the latest Docker image version.
+5. Finally, tag the latest Docker image version.
 
-    The Docker image will be tagged as `latest`, `0.4.999`, and `0.4`.  Our self-hosters generally use the `0.4` tag, and their PDS distribution will be updated automatically over night in many cases.  The Docker tags are generated automatically from git tags.
+    The Docker image will be tagged as `latest`, `0.4.8009`, and `0.4`.  Our self-hosters generally use the `0.4` tag, and their PDS distribution will be updated automatically over night in many cases.  The Docker tags are generated automatically from git tags.
     ```sh
-    $ git tag v0.4.999
+    $ git tag v0.4.8009
     $ git push --tags
     ```

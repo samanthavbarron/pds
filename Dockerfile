@@ -1,5 +1,5 @@
 # NOTE there is an additional build stage below that should match
-FROM node:20.20-alpine3.23 as build
+FROM node:24.18-alpine3.23 AS build
 
 RUN corepack enable
 
@@ -17,7 +17,7 @@ RUN corepack prepare --activate
 RUN pnpm install --production --frozen-lockfile > /dev/null
 
 # Uses assets from build stage to reduce build size
-FROM node:20.20-alpine3.23
+FROM node:24.18-alpine3.23
 
 RUN apk add --update dumb-init \
     bash openssl jq ca-certificates curl gnupg jq \
@@ -43,7 +43,7 @@ ENV NODE_ENV=production
 # potential perf issues w/ io_uring on this version of node
 ENV UV_USE_IO_URING=0
 
-CMD ["node", "--enable-source-maps", "index.js"]
+CMD ["node", "--enable-source-maps", "index.ts"]
 
 LABEL org.opencontainers.image.source=https://github.com/samanthavbarron/pds
 LABEL org.opencontainers.image.description="AT Protocol PDS"
