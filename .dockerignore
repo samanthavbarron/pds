@@ -1,0 +1,10 @@
+# Build only the service and in-container administration scripts.
+**
+!service/
+!service/**
+!scripts/
+!scripts/**
+**/node_modules
+**/.git
+**/.env
+**/*.env

@@ -2,3 +2,5 @@
 node_modules
 pds
 .env
+pds.env
+*.env.local

@@ -1,63 +1,75 @@
 name: build-and-push-ghcr
+
 on:
+  pull_request:
+    branches: [main]
   push:
-    branches:
-      - main
-      - pdsv2
-    tags:
-      - v*
+    branches: [main]
+    tags: ['v*']
+
+permissions:
+  contents: read
+
 env:
   REGISTRY: ghcr.io
-  USERNAME: ${{ github.actor }}
-  PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-
-  # github.repository as <account>/<repo>
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  pds-container-ghcr:
+  validate-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - name: Add build-context canaries
+        run: |
+          echo not-a-real-secret > .env
+          echo not-a-real-secret > service/build-canary.env
+      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          load: true
+          tags: pds:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Inspect every layer and test PDS startup
+        run: python3 test/check_image.py pds:ci
+
+  publish:
+    if: github.event_name == 'push'
+    needs: validate-image
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-      id-token: write
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      - name: Setup Docker buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log into registry ${{ env.REGISTRY }}
-        uses: docker/login-action@v3
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # v4
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ env.USERNAME }}
-          password: ${{ env.PASSWORD }}
-
-      - name: Extract Docker metadata
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6
         id: meta
-        uses: docker/metadata-action@v5
         with:
-          images: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
             type=sha,format=long
-            type=raw,value=latest
-
-      - name: Build and push Docker image
-        id: build-and-push
-        uses: docker/build-push-action@v6
+      - uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           platforms: linux/amd64,linux/arm64
-          file: ./Dockerfile
-          tags: |
-            ${{ steps.meta.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
